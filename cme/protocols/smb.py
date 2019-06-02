@@ -32,6 +32,7 @@ from pywerview.requester import RPCRequester
 from time import time
 from datetime import datetime
 from functools import wraps
+from traceback import format_exc
 
 smb_share_name = gen_random_string(5).upper()
 smb_server = None
@@ -89,6 +90,7 @@ def requires_smb_server(func):
 
     return wraps(func)(_decorator)
 
+
 class smb(connection):
 
     def __init__(self, args, db, host):
@@ -117,7 +119,8 @@ class smb(connection):
         smb_parser.add_argument("--port", type=int, choices={445, 139}, default=445, help="SMB port (default: 445)")
         smb_parser.add_argument("--share", metavar="SHARE", default="C$", help="specify a share (default: C$)")
         smb_parser.add_argument("--gen-relay-list", metavar='OUTPUT_FILE', help="outputs all hosts that don't require SMB signing to the specified file")
-
+        smb_parser.add_argument("--continue-on-success", action='store_true', help="continues authentication attempts even after successes")
+        
         cgroup = smb_parser.add_argument_group("Credential Gathering", "Options for gathering credentials")
         cegroup = cgroup.add_mutually_exclusive_group()
         cegroup.add_argument("--sam", action='store_true', help='dump SAM hashes from target systems')
@@ -258,10 +261,11 @@ class smb(connection):
             out = u'{}\\{}:{} {}'.format(domain.decode('utf-8'),
                                          username.decode('utf-8'),
                                          password.decode('utf-8'),
-                                         highlight('(Pwn3d!)') if self.admin_privs else '')
+                                         highlight('({})'.format(self.config.get('CME', 'pwn3d_label')) if self.admin_privs else ''))
 
             self.logger.success(out)
-            return True
+            if not self.args.continue_on_success:
+                return True
         except SessionError as e:
             error, desc = e.getErrorString()
             self.logger.error(u'{}\\{}:{} {} {}'.format(domain.decode('utf-8'),
@@ -302,10 +306,11 @@ class smb(connection):
             out = u'{}\\{} {} {}'.format(domain.decode('utf-8'),
                                          username.decode('utf-8'),
                                          ntlm_hash,
-                                         highlight('(Pwn3d!)') if self.admin_privs else '')
+                                         highlight('({})'.format(self.config.get('CME', 'pwn3d_label')) if self.admin_privs else ''))
 
             self.logger.success(out)
-            return True
+            if not self.args.continue_on_success:
+                return True
         except SessionError as e:
             error, desc = e.getErrorString()
             self.logger.error(u'{}\\{} {} {} {}'.format(domain.decode('utf-8'),
@@ -558,6 +563,18 @@ class smb(connection):
 
         return groups
 
+    def domainfromdsn(self, dsn):
+        dsnparts = dsn.split(',')
+        domain = ""
+        for part in dsnparts:
+            k,v = part.split("=")
+            if k == "DC":
+                if domain=="":
+                    domain = v
+                else:
+                    domain = domain+"."+v
+        return domain
+
     def groups(self):
         groups = []
         for dc_ip in self.get_dc_ips():
@@ -597,7 +614,7 @@ class smb(connection):
 
                         if bool(group.isgroup) is True:
                             # Since there isn't a groupmemeber attribute on the returned object from get_netgroup we grab it from the distinguished name
-                            _,domain = group.distinguishedname.split(',')[-2].split('=')
+                            domain = self.domainfromdsn(group.distinguishedname)
                             self.db.add_group(domain, group.samaccountname)
                     break
                 except Exception as e:
@@ -616,13 +633,9 @@ class smb(connection):
 
                 self.logger.success('Enumerated domain user(s)')
                 for user in users:
-                    if not self.args.users:
-                        _,domain = user.distinguishedname.split(',')[-2].split('=')
-                        self.logger.highlight('{}\\{:<40} badpwdcount: {} badpwdtime: {}'.format(domain, user.samaccountname, user.badpwdcount, user.badpasswordtime))
-                        self.db.add_user(domain, user.samaccountname)
-                    else:
-                        for k,v in vars(user).iteritems():
-                            self.logger.highlight('{:<40} {}'.format(k + ':',v))
+                    domain = self.domainfromdsn(user.distinguishedname)
+                    self.logger.highlight('{}\\{:<30} badpwdcount: {} baddpwdtime: {}'.format(domain,user.samaccountname,getattr(user,'badpwdcount',0),getattr(user, 'badpasswordtime','')))
+                    self.db.add_user(domain, user.samaccountname)
 
                 break
             except Exception as e:

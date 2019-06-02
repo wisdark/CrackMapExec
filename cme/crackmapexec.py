@@ -47,7 +47,7 @@ def main():
     config = ConfigParser()
     config.read(os.path.join(cme_path, 'cme.conf'))
 
-    module  = None
+    module = None
     module_server = None
     targets = []
     jitter = None
@@ -133,6 +133,8 @@ def main():
     db_connection.text_factory = str
     db_connection.isolation_level = None
     db = protocol_db_object(db_connection)
+
+    setattr(protocol_object, 'config', config)
 
     if hasattr(args, 'module'):
 

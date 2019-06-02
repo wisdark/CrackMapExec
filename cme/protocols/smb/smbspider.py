@@ -27,14 +27,32 @@ class SMBSpider:
             except Exception as e:
                 self.logger.error('Regex compilation error: {}'.format(e))
 
-        self.share = share
         self.folder = folder
         self.pattern = pattern
         self.exclude_dirs = exclude_dirs
         self.content = content
         self.onlyfiles = onlyfiles
-        
-        self._spider(folder, depth)
+
+        if share == "*":
+            self.logger.info("Enumerating shares for spidering")
+            permissions = []
+            try:
+                for share in self.smbconnection.listShares():
+                    share_name = share['shi1_netname'][:-1]
+                    share_remark = share['shi1_remark'][:-1]
+                    try:
+                        self.smbconnection.listPath(share_name, '*')
+                        self.share = share_name
+                        self.logger.info("Spidering share: {0}".format(share_name))
+                        self._spider(folder, depth)
+                    except SessionError:
+                        pass
+            except Exception as e:
+                self.logger.error('Error enumerating shares: {}'.format(e))
+        else:
+            self.share = share
+            self.logger.info("Spidering {0}".format(folder))
+            self._spider(folder, depth)
 
         return self.results
 
@@ -83,9 +101,11 @@ class SMBSpider:
             for pattern in self.pattern:
                 if result.get_longname().lower().find(pattern.lower()) != -1:
                     if not self.onlyfiles and result.is_directory():
-                        self.logger.highlight(u"//{}/{}{} [dir]".format(self.share, path, result.get_longname()))
+                        self.logger.highlight(u"//{}/{}/{}{} [dir]".format(self.smbconnection.getRemoteHost(), self.share, 
+                                                                           path, 
+                                                                           result.get_longname()))
                     else:
-                        self.logger.highlight(u"//{}/{}{} [lastm:'{}' size:{}]".format(self.share,
+                        self.logger.highlight(u"//{}/{}/{}{} [lastm:'{}' size:{}]".format(self.smbconnection.getRemoteHost(), self.share,
                                                                                        path,
                                                                                        result.get_longname(),
                                                                                        'n\\a' if not self.get_lastm_time(result) else self.get_lastm_time(result),
@@ -95,9 +115,9 @@ class SMBSpider:
             for regex in self.regex:
                 if regex.findall(result.get_longname()):
                     if not self.onlyfiles and result.is_directory():
-                        self.logger.highlight(u"//{}/{}{} [dir]".format(self.share, path, result.get_longname()))
+                        self.logger.highlight(u"//{}/{}/{}{} [dir]".format(self.smbconnection.getRemoteHost(), self.share, path, result.get_longname()))
                     else:
-                        self.logger.highlight(u"//{}/{}{} [lastm:'{}' size:{}]".format(self.share,
+                        self.logger.highlight(u"//{}/{}/{}{} [lastm:'{}' size:{}]".format(self.smbconnection.getRemoteHost(), self.share,
                                                                                        path,
                                                                                        result.get_longname(),
                                                                                        'n\\a' if not self.get_lastm_time(result) else self.get_lastm_time(result),
@@ -132,7 +152,8 @@ class SMBSpider:
 
                 for pattern in self.pattern:
                     if contents.lower().find(pattern.lower()) != -1:
-                        self.logger.highlight(u"//{}/{}{} [lastm:'{}' size:{} offset:{} pattern:'{}']".format(self.share,
+                        self.logger.highlight(u"//{}/{}/{}{} [lastm:'{}' size:{} offset:{} pattern:'{}']".format(self.smbconnection.getRemoteHost(), 
+                                                                                                            self.share,
                                                                                                             path,
                                                                                                             result.get_longname(),
                                                                                                             'n\\a' if not self.get_lastm_time(result) else self.get_lastm_time(result),
@@ -143,7 +164,8 @@ class SMBSpider:
 
                 for regex in self.regex:
                     if regex.findall(contents):
-                        self.logger.highlight(u"//{}/{}{} [lastm:'{}' size:{} offset:{} regex:'{}']".format(self.share,
+                        self.logger.highlight(u"//{}/{}/{}{} [lastm:'{}' size:{} offset:{} regex:'{}']".format(self.smbconnection.getRemoteHost(),
+                                                                                                          self.share,
                                                                                                           path,
                                                                                                           result.get_longname(),
                                                                                                           'n\\a' if not self.get_lastm_time(result) else self.get_lastm_time(result),

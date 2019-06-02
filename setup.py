@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 from setuptools import setup, find_packages
 
 setup(name='crackmapexec',
@@ -18,7 +20,7 @@ setup(name='crackmapexec',
         "cme", "cme.*"
     ]),
     install_requires=[
-        'pycrypto>=2.6',
+        'pycryptodomex',
         'pyasn1>=0.1.8',
         'gevent>=1.2.0',
         'requests>=2.9.1',
@@ -32,7 +34,8 @@ setup(name='crackmapexec',
         'splinter',
         'paramiko',
         'xmltodict',
-        'six'
+        'six',
+        'terminaltables'
     ],
     entry_points={
         'console_scripts': ['crackmapexec=cme.crackmapexec:main', 'cme=cme.crackmapexec:main', 'cmedb=cme.cmedb:main'],
