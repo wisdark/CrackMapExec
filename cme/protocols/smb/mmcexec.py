@@ -31,7 +31,6 @@ import os
 from gevent import sleep
 from cme.helpers.misc import gen_random_string
 
-from impacket import version
 from impacket.dcerpc.v5.dcom.oaut import IID_IDispatch, string_to_bin, IDispatch, DISPPARAMS, DISPATCH_PROPERTYGET, \
     VARIANT, VARENUM, DISPATCH_METHOD
 from impacket.dcerpc.v5.dcomrt import DCOMConnection
@@ -175,7 +174,7 @@ class MMCEXEC:
         self.get_output_fileless()
 
     def output_callback(self, data):
-        self.__outputBuffer += data
+        self.__outputBuffer += data.decode("utf-8") 
 
     def get_output_fileless(self):
         if not self.__retOutput: return

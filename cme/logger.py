@@ -56,7 +56,7 @@ class CMEAdapter(logging.LoggerAdapter):
         return u'{:<24} {:<15} {:<6} {:<16} {}'.format(module_name,
                                                     self.extra['host'],
                                                     self.extra['port'],
-                                                    self.extra['hostname'].decode('utf-8') if self.extra['hostname'] else 'NONE',
+                                                    self.extra['hostname'] if self.extra['hostname'] else 'NONE',
                                                     msg), kwargs
 
     def info(self, msg, *args, **kwargs):
@@ -69,8 +69,8 @@ class CMEAdapter(logging.LoggerAdapter):
         msg, kwargs = self.process(u'{} {}'.format(colored("[*]", 'blue', attrs=['bold']), msg), kwargs)
         self.logger.info(msg, *args, **kwargs)
 
-    def error(self, msg, *args, **kwargs):
-        msg, kwargs = self.process(u'{} {}'.format(colored("[-]", 'red', attrs=['bold']), msg), kwargs)
+    def error(self, msg, color='red', *args, **kwargs):
+        msg, kwargs = self.process(u'{} {}'.format(colored("[-]", color, attrs=['bold']), msg), kwargs)
         self.logger.error(msg, *args, **kwargs)
 
     def debug(self, msg, *args, **kwargs):

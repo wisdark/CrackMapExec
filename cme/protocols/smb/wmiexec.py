@@ -8,7 +8,7 @@ from impacket.dcerpc.v5.dcom import wmi
 from impacket.dcerpc.v5.dtypes import NULL
 
 class WMIEXEC:
-    def __init__(self, target, share_name, username, password, domain, smbconnection, hashes=None, share=None):
+    def __init__(self, target, share_name, username, password, domain, smbconnection, doKerberos=False, aesKey=None, kdcHost=None, hashes=None, share=None):
         self.__target = target
         self.__username = username
         self.__password = password
@@ -18,12 +18,13 @@ class WMIEXEC:
         self.__share = share
         self.__smbconnection = smbconnection
         self.__output = None
-        self.__outputBuffer = ''
+        self.__outputBuffer = b''
         self.__share_name = share_name
         self.__shell = 'cmd.exe /Q /c '
         self.__pwd = 'C:\\'
-        self.__aesKey = None
-        self.__doKerberos = False
+        self.__aesKey = aesKey
+        self.__kdcHost = kdcHost
+        self.__doKerberos = doKerberos
         self.__retOutput = True
 
         if hashes is not None:
@@ -35,8 +36,7 @@ class WMIEXEC:
 
         if self.__password is None:
             self.__password = ''
-
-        self.__dcom = DCOMConnection(self.__target, self.__username, self.__password, self.__domain, self.__lmhash, self.__nthash, self.__aesKey, oxidResolver = True, doKerberos=self.__doKerberos)
+        self.__dcom = DCOMConnection(self.__target, self.__username, self.__password, self.__domain, self.__lmhash, self.__nthash, self.__aesKey, oxidResolver=True, doKerberos=self.__doKerberos, kdcHost=self.__kdcHost)
         iInterface = self.__dcom.CoCreateInstanceEx(wmi.CLSID_WbemLevel1Login,wmi.IID_IWbemLevel1Login)
         iWbemLevel1Login = wmi.IWbemLevel1Login(iInterface)
         iWbemServices= iWbemLevel1Login.NTLMLogin('//./root/cimv2', NULL, NULL)
@@ -48,21 +48,31 @@ class WMIEXEC:
         self.__retOutput = output
         if self.__retOutput:
             self.__smbconnection.setTimeout(100000)
-
-        self.execute_handler(command)
+        if os.path.isfile(command):
+            with open(command) as commands:
+                for c in commands:
+                    self.execute_handler(c.strip())
+        else:
+            self.execute_handler(command)
         self.__dcom.disconnect()
-        return self.__outputBuffer
+        try:
+            if isinstance(self.__outputBuffer, str):
+                return self.__outputBuffer
+            return self.__outputBuffer.decode()
+        except UnicodeDecodeError:
+            logging.debug('Decoding error detected, consider running chcp.com at the target, map the result with https://docs.python.org/3/library/codecs.html#standard-encodings')
+            return self.__outputBuffer.decode('cp437')
 
     def cd(self, s):
         self.execute_remote('cd ' + s)
         if len(self.__outputBuffer.strip('\r\n')) > 0:
-            print self.__outputBuffer
-            self.__outputBuffer = ''
+            print(self.__outputBuffer)
+            self.__outputBuffer = b''
         else:
             self.__pwd = ntpath.normpath(ntpath.join(self.__pwd, s))
             self.execute_remote('cd ')
             self.__pwd = self.__outputBuffer.strip('\r\n')
-            self.__outputBuffer = ''
+            self.__outputBuffer = b''
 
     def output_callback(self, data):
         self.__outputBuffer += data
@@ -70,7 +80,8 @@ class WMIEXEC:
     def execute_handler(self, data):
         if self.__retOutput:
             try:
-                self.execute_fileless(data)
+                logging.debug('Executing remote')
+                self.execute_remote(data)
             except:
                 self.cd('\\')
                 self.execute_remote(data)

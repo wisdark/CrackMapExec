@@ -2,13 +2,16 @@ import os
 import sqlite3
 import shutil
 import cme
-from ConfigParser import ConfigParser, NoSectionError, NoOptionError
+import configparser
+from configparser import ConfigParser, NoSectionError, NoOptionError
 from cme.loaders.protocol_loader import protocol_loader
 from subprocess import check_output, PIPE
 from sys import exit
 
 CME_PATH = os.path.expanduser('~/.cme')
 TMP_PATH = os.path.join('/tmp', 'cme_hosted')
+if os.name == 'nt':
+    TMP_PATH = os.getenv('LOCALAPPDATA') + '\\Temp\\cme_hosted'
 WS_PATH = os.path.join(CME_PATH, 'workspaces')
 CERT_PATH = os.path.join(CME_PATH, 'cme.pem')
 CONFIG_PATH = os.path.join(CME_PATH, 'cme.conf')
@@ -65,7 +68,7 @@ def first_run_setup(logger):
     else:
         # This is just a quick check to make sure the config file isn't the old 3.x format
         try:
-            config = ConfigParser()
+            config = configparser.ConfigParser()
             config.read(CONFIG_PATH)
             config.get('CME', 'workspace')
             config.get('CME', 'pwn3d_label')

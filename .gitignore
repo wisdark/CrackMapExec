@@ -1,9 +1,12 @@
 data/cme.db
+*.bak
 *.log
 .venv
+.vscode
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
+bin/
 
 # C extensions
 *.so
@@ -31,6 +34,7 @@ var/
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+!crackmapexec.spec
 
 # Installer logs
 pip-log.txt
