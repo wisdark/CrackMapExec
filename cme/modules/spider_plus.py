@@ -173,6 +173,9 @@ class SMBSpiderPlus:
         self.logger.debug(f'Spider share "{share}" on folder "{subfolder}"')
 
         filelist = self.list_path(share, subfolder + '*')
+        if share.lower() in self.exclude_dirs:
+            self.logger.debug(f'The directory has been excluded')
+            return
 
         # For each entry:
         # - It's a directory then we spider it (skipping `.` and `..`)
@@ -301,8 +304,8 @@ class CMEModule:
         """
 
         self.read_only = module_options.get('READ_ONLY', True)
-        self.exclude_exts = get_list_from_option(module_options.get('EXT', 'ico,lnk'))
-        self.exlude_dirs = get_list_from_option(module_options.get('DIR', 'print$'))
+        self.exclude_exts = get_list_from_option(module_options.get('EXCLUDE_EXTS', 'ico,lnk'))
+        self.exlude_dirs = get_list_from_option(module_options.get('EXCLUDE_DIR', 'print$'))
         self.max_file_size = int(module_options.get('SIZE', 50 * 1024))
         self.output_folder = module_options.get('OUTPUT', os.path.join('/tmp', 'cme_spider_plus'))
 
