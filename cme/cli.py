@@ -7,8 +7,8 @@ from termcolor import colored
 
 def gen_cli_args():
 
-    VERSION  = '5.1.7dev'
-    CODENAME = 'U fancy huh?'
+    VERSION  = '5.2.3'
+    CODENAME = "The Dark Knight"
 
     p_loader =  protocol_loader()
     protocols = p_loader.get_protocols()
@@ -21,12 +21,13 @@ def gen_cli_args():
     |  `----.|  |\  \----. /  _____  \  |  `----.|  .  \  |  |  |  |  /  _____  \  |  |      |  |____  /  .  \  |  |____ |  `----.
      \______|| _| `._____|/__/     \__\  \______||__|\__\ |__|  |__| /__/     \__\ | _|      |_______|/__/ \__\ |_______| \______|
 
-                                                 A swiss army knife for pentesting networks
+                                                A swiss army knife for pentesting networks
                                     Forged by @byt3bl33d3r and @mpgn_x64 using the powah of dank memes
 
-                                           {colored("Public release for all users", "magenta")}
+                                           {colored("Exclusive release for Porchetta Industries users", "magenta")}
+                                                       {colored("https://porchetta.industries/", "magenta")}
 
-                                                     {highlight('Version', 'red')}: {highlight(VERSION)}
+                                                   {highlight('Version', 'red')} : {highlight(VERSION)}
                                                    {highlight('Codename', 'red')}: {highlight(CODENAME)}
 """,
 
@@ -46,8 +47,9 @@ def gen_cli_args():
     std_parser.add_argument("-u", metavar="USERNAME", dest='username', nargs='+', default=[], help="username(s) or file(s) containing usernames")
     std_parser.add_argument("-p", metavar="PASSWORD", dest='password', nargs='+', default=[], help="password(s) or file(s) containing passwords")
     std_parser.add_argument("-k", "--kerberos", action='store_true', help="Use Kerberos authentication from ccache file (KRB5CCNAME)")
+    std_parser.add_argument("--export", metavar="EXPORT", nargs='+', help="Export result into a file, probably buggy")
     std_parser.add_argument("--aesKey",  metavar="AESKEY", nargs='+', help="AES key to use for Kerberos Authentication (128 or 256 bits)")
-    std_parser.add_argument("--kdcHost", metavar="KDCHOST", help="IP Address of the domain controller. If omitted it will use the domain part (FQDN) specified in the target parameter")
+    std_parser.add_argument("--kdcHost", metavar="KDCHOST", help="FQDN of the domain controller. If omitted it will use the domain part (FQDN) specified in the target parameter")
 
     fail_group = std_parser.add_mutually_exclusive_group()
     fail_group.add_argument("--gfail-limit", metavar='LIMIT', type=int, help='max number of global failed login attempts')
@@ -64,6 +66,7 @@ def gen_cli_args():
     module_parser.add_argument("--server", choices={'http', 'https'}, default='https', help='use the selected server (default: https)')
     module_parser.add_argument("--server-host", type=str, default='0.0.0.0', metavar='HOST', help='IP to bind the server to (default: 0.0.0.0)')
     module_parser.add_argument("--server-port", metavar='PORT', type=int, help='start the server on the specified port')
+    module_parser.add_argument("--connectback-host", type=str, metavar='CHOST', help='IP for the remote system to connect back to (default: same as server-host)')
 
     for protocol in protocols.keys():
         protocol_object = p_loader.load_protocol(protocols[protocol]['path'])

@@ -7,6 +7,7 @@ from socket import gethostbyname
 from functools import wraps
 from cme.logger import CMEAdapter
 from cme.context import Context
+from cme.helpers.logger import write_log
 
 sem = BoundedSemaphore(1)
 global_failed_logins = 0
@@ -21,8 +22,9 @@ def gethost_addrinfo(hostname):
         for res in socket.getaddrinfo(hostname, None, socket.AF_INET,
                 socket.SOCK_DGRAM, socket.IPPROTO_IP, socket.AI_CANONNAME):
             af, socktype, proto, canonname, sa = res
-
-    return sa[0]
+    if canonname == '':
+        return sa[0]
+    return canonname
 
 def requires_admin(func):
     def _decorator(self, *args, **kwargs):
@@ -45,6 +47,7 @@ class connection(object):
         self.kerberos = True if self.args.kerberos else False
         self.aesKey = None if not self.args.aesKey else self.args.aesKey
         self.kdcHost = None if not self.args.kdcHost else self.args.kdcHost
+        self.export = None if not self.args.export else self.args.export
         self.failed_logins = 0
         self.local_ip = None
 
@@ -103,7 +106,9 @@ class connection(object):
             if hasattr(self, k) and hasattr(getattr(self, k), '__call__'):
                 if v is not False and v is not None:
                     logging.debug('Calling {}()'.format(k))
-                    getattr(self, k)()
+                    r = getattr(self, k)()
+                    if self.export:
+                        write_log(str(r), self.export[0])
 
     def call_modules(self):
         module_logger = CMEAdapter(extra={
@@ -155,7 +160,7 @@ class connection(object):
 
     def login(self):
         if self.args.kerberos:
-            if self.kerberos_login(self.aesKey, self.kdcHost): return True
+            if self.kerberos_login(self.domain, self.aesKey, self.kdcHost): return True
         else:
             for cred_id in self.args.cred_id:
                 with sem:
@@ -211,7 +216,7 @@ class connection(object):
                                                             if self.hash_login(self.domain, usr.strip(), f_hash.strip()): return True
                                         else: # ntlm_hash is a string
                                             if not self.over_fail_limit(usr.strip()):
-                                                if self.hash_login(self.domain, usr.strip(), ntlm_hash_file): return True
+                                                if self.hash_login(self.domain, usr.strip(), ntlm_hash.strip()): return True
 
                             elif self.args.password:
                                 with sem:
@@ -251,7 +256,7 @@ class connection(object):
                                                 if self.hash_login(self.domain, user, f_hash.strip()): return True
                                 else: # ntlm_hash is a string
                                     if not self.over_fail_limit(user):
-                                        if self.hash_login(self.domain, user, ntlm_hash): return True
+                                        if self.hash_login(self.domain, user, ntlm_hash.strip()): return True
 
                     elif self.args.password:
                         with sem:

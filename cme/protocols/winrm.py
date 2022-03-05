@@ -5,6 +5,7 @@ import configparser
 from impacket.smbconnection import SMBConnection, SessionError
 from cme.connection import *
 from cme.helpers.logger import highlight
+from cme.helpers.bloodhound import add_user_bh
 from cme.logger import CMEAdapter
 from io import StringIO
 from pypsrp.client import Client
@@ -56,7 +57,7 @@ class winrm(connection):
                     self.call_cmd_args()
 
     def proto_logger(self):
-        self.logger = CMEAdapter(extra={'protocol': 'WINRM',
+        self.logger = CMEAdapter(extra={'protocol': 'SMB',
                                         'host': self.host,
                                         'port': 'NONE',
                                         'hostname': 'NONE'})
@@ -96,12 +97,16 @@ class winrm(connection):
 
     def print_host_info(self):
         if self.args.domain:
+            self.logger.extra['protocol'] = "HTTP"
             self.logger.info(self.endpoint)
-        else:    
+        else:
+            self.logger.extra['protocol'] = "SMB"
             self.logger.info(u"{} (name:{}) (domain:{})".format(self.server_os,
                                                                     self.hostname,
                                                                     self.domain))
+            self.logger.extra['protocol'] = "HTTP"
             self.logger.info(self.endpoint)
+        self.logger.extra['protocol'] = "WINRM"
         
 
     def create_conn_obj(self):
@@ -135,7 +140,7 @@ class winrm(connection):
             log.addFilter(SuppressFilter())
             self.conn = Client(self.host,
                                         auth='ntlm',
-                                        username=username,
+                                        username=u'{}\\{}'.format(domain, username),
                                         password=password,
                                         ssl=False)
 
@@ -147,6 +152,7 @@ class winrm(connection):
                                                        username,
                                                        password,
                                                        highlight('({})'.format(self.config.get('CME', 'pwn3d_label')) if self.admin_privs else '')))
+            add_user_bh(self.username, self.domain, self.logger, self.config) 
             if not self.args.continue_on_success:
                 return True
 
@@ -182,7 +188,7 @@ class winrm(connection):
             if nthash: self.nthash = nthash
             self.conn = Client(self.host,
                                         auth='ntlm',
-                                        username=username,
+                                        username=u'{}\\{}'.format(domain, username),
                                         password=ntlm_hash,
                                         ssl=False)
 
@@ -194,6 +200,7 @@ class winrm(connection):
                                                        username,
                                                        self.hash,
                                                        highlight('({})'.format(self.config.get('CME', 'pwn3d_label')) if self.admin_privs else '')))
+            add_user_bh(self.username, self.domain, self.logger, self.config)
             if not self.args.continue_on_success:
                 return True
 
