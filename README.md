@@ -11,7 +11,15 @@
 
 ## In partnership with
 
-<p align="center"><img height=150 width=300 src="https://user-images.githubusercontent.com/5151193/99304058-1cef5700-280f-11eb-8642-1f9553808d2d.png"/></p>
+<p float="left">
+ <a href="https://www.kali.org/">
+  <img src="https://user-images.githubusercontent.com/5151193/99304058-1cef5700-280f-11eb-8642-1f9553808d2d.png" width="300" align="left"/>
+ </a>
+ 
+  <a href="https://focal-point.com/services/penetration-testing/">
+    <img src="https://user-images.githubusercontent.com/5151193/182207768-f53d7e0e-5bd5-40cf-8734-dfa6a40a738e.png" width="300"/> 
+  </a>
+</p>
 
 ## :triangular_flag_on_post: Sponsors
 
@@ -37,25 +45,11 @@ Unintentional contributors:
 - @T-S-A's [smbspider](https://github.com/T-S-A/smbspider) script
 - @ConsciousHacker's partial Python port of Invoke-obfuscation from the [GreatSCT](https://github.com/GreatSCT/GreatSCT) project
 
-This repository contains the following repositories as submodules:
-- [Impacket](https://github.com/CoreSecurity/impacket) ♥️
-- [Invoke-Obfuscation](https://github.com/danielbohannon/Invoke-Obfuscation)
-- [Invoke-Vnc](https://github.com/artkond/Invoke-Vnc)
-- [Mimikittenz](https://github.com/putterpanda/mimikittenz)
-- [Mimipenguin](https://github.com/huntergregal/mimipenguin)
-- [NetRipper](https://github.com/NytroRST/NetRipper)
-- [PowerSploit](https://github.com/PowerShellMafia/PowerSploit)
-- [Pypsrp](https://github.com/jborean93/pypsrp)
-- [Pywerview](https://github.com/the-useless-one/pywerview)
-- [RandomPS-Scripts](https://github.com/xorrior/RandomPS-Scripts)
-- [RID-Hijacking](https://github.com/r4wd3r/RID-Hijacking)
-- [SessionGopher](https://github.com/fireeye/SessionGopher)
-
 # Documentation, Tutorials, Examples
-See the project's [wiki](https://github.com/byt3bl33d3r/CrackMapExec/wiki) for documentation and usage examples
+See the project's [wiki](https://mpgn.gitbook.io/crackmapexec/) for documentation and usage examples
 
 # Installation
-Please see the installation wiki page [here](https://github.com/byt3bl33d3r/CrackMapExec/wiki/Installation) or the [GitBook](https://mpgn.gitbook.io/crackmapexec/)
+Please see the installation on the [GitBook](https://mpgn.gitbook.io/crackmapexec/)
 
 # To do
 - ~~0wn everything~~

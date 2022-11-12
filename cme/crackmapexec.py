@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
 from cme.logger import setup_logger, setup_debug_logger, CMEAdapter
 from cme.helpers.logger import highlight
@@ -75,6 +76,8 @@ async def run_protocol(loop, protocol_obj, args, db, target, jitter):
     except asyncio.CancelledError:
         logging.debug("Stopping thread")
         thread.cancel()
+    except sqlite3.OperationalError as e:
+        logging.debug("Sqlite error - sqlite3.operationalError - {}".format(str(e)))
 
 async def start_threadpool(protocol_obj, args, db, targets, jitter):
     pool = ThreadPoolExecutor(max_workers=args.threads + 1)

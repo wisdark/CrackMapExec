@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import ntpath, logging
 import os
 
@@ -55,13 +58,7 @@ class WMIEXEC:
         else:
             self.execute_handler(command)
         self.__dcom.disconnect()
-        try:
-            if isinstance(self.__outputBuffer, str):
-                return self.__outputBuffer
-            return self.__outputBuffer.decode()
-        except UnicodeDecodeError:
-            logging.debug('Decoding error detected, consider running chcp.com at the target, map the result with https://docs.python.org/3/library/codecs.html#standard-encodings')
-            return self.__outputBuffer.decode('cp437')
+        return self.__outputBuffer
 
     def cd(self, s):
         self.execute_remote('cd ' + s)

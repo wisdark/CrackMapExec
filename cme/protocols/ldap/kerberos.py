@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import logging
 import random
 from os import getenv
@@ -20,6 +23,7 @@ class KerberosAttacks:
         self.username = connection.username
         self.password = connection.password
         self.domain = connection.domain
+        self.targetDomain = connection.targetDomain
         self.hash = connection.hash
         self.lmhash = ''
         self.nthash = ''
@@ -83,10 +87,6 @@ class KerberosAttacks:
     def getTGT_kerberoasting(self):
         try:
             ccache = CCache.loadFile(getenv('KRB5CCNAME'))
-        except:
-            # No cache present
-            pass
-        else:
             # retrieve user and domain information from CCache file if needed
             if self.domain == '':
                 domain = ccache.principal.realm['data']
@@ -101,6 +101,9 @@ class KerberosAttacks:
                 return TGT
             else:
                 logging.debug("No valid credentials found in cache. ")
+        except:
+            # No cache present
+            pass
 
         # No TGT in cache, request it
         userName = Principal(self.username, type=constants.PrincipalNameType.NT_PRINCIPAL.value)
@@ -140,7 +143,7 @@ class KerberosAttacks:
 
         asReq = AS_REQ()
 
-        domain = self.domain.upper()
+        domain = self.targetDomain.upper()
         serverName = Principal('krbtgt/%s' % domain, type=constants.PrincipalNameType.NT_PRINCIPAL.value)
 
         pacRequest = KERB_PA_PAC_REQUEST()

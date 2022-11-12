@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import logging
 import random
 from pyasn1.codec.der import decoder, encoder
@@ -93,7 +96,7 @@ class LDAPConnect:
             return False
 
         except OSError as e:
-            self.logger.error(u'{}\\{}:{} {}'.format(domain, 
+            self.logger.debug(u'{}\\{}:{} {}'.format(domain, 
                                                  username, 
                                                  password if password else ntlm_hash,
                                                  "Error connecting to the domain, please add option --kdcHost with the FQDN of the domain controller"))

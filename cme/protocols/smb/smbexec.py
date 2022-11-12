@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import logging
 import os
 from time import sleep
@@ -76,13 +79,7 @@ class SMBEXEC:
         else:
             self.execute_remote(command)
         self.finish()
-        try:
-            if isinstance(self.__outputBuffer, str):
-                return self.__outputBuffer
-            return self.__outputBuffer.decode()
-        except UnicodeDecodeError:
-            logging.debug('Decoding error detected, consider running chcp.com at the target, map the result with https://docs.python.org/3/library/codecs.html#standard-encodings')
-            return self.__outputBuffer.decode('cp437')
+        return self.__outputBuffer
         
 
     def output_callback(self, data):
@@ -93,7 +90,7 @@ class SMBEXEC:
         self.__batchFile = gen_random_string(6) + '.bat'
 
         if self.__retOutput:
-            command = self.__shell + 'echo '+ data + ' ^> \\\\127.0.0.1\\{}\\{} 2^>^&1 > %TEMP%\{} & %COMSPEC% /Q /c %TEMP%\{} & del %TEMP%\{}'.format(self.__share_name, self.__output, self.__batchFile, self.__batchFile, self.__batchFile)
+            command = self.__shell + 'echo '+ data + ' ^> \\\\127.0.0.1\\{}\\{} 2^>^&1 > %TEMP%\{} & %COMSPEC% /Q /c %TEMP%\{} & %COMSPEC% /Q /c del %TEMP%\{}'.format(self.__share_name, self.__output, self.__batchFile, self.__batchFile, self.__batchFile)
         else:
             command = self.__shell + data
 

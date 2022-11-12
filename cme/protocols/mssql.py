@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
 import socket
 import logging
 from cme.logger import CMEAdapter
@@ -21,6 +24,7 @@ class mssql(connection):
         self.server_os = None
         self.hash = None
         self.os_arch = None
+        self.nthash = ''
 
         connection.__init__(self, args, db, host)
 
@@ -46,6 +50,10 @@ class mssql(connection):
         psgroup = mssql_parser.add_argument_group('Powershell Obfuscation', "Options for PowerShell script obfuscation")
         psgroup.add_argument('--obfs', action='store_true', help='Obfuscate PowerShell scripts')
         psgroup.add_argument('--clear-obfscripts', action='store_true', help='Clear all cached obfuscated PowerShell scripts')
+
+        tgroup = mssql_parser.add_argument_group("Files", "Options for put and get remote files")
+        tgroup.add_argument("--put-file", nargs=2, metavar="FILE", help='Put a local file into remote target, ex: whoami.txt C:\\Windows\\Temp\\whoami.txt')
+        tgroup.add_argument("--get-file", nargs=2, metavar="FILE", help='Get a remote file, ex: C:\\Windows\\Temp\\whoami.txt whoami.txt')
 
         return parser
 
@@ -134,7 +142,7 @@ class mssql(connection):
 
         return True
 
-    def check_if_admin(self, auth):
+    def check_if_admin(self):
         try:
             self.conn.sql_query("SELECT IS_SRVROLEMEMBER('sysadmin')")
             self.conn.printRows()
@@ -150,6 +158,60 @@ class mssql(connection):
             return False
 
         return True
+
+    def kerberos_login(self, domain, username, password = '', ntlm_hash = '', aesKey = '', kdcHost = '', useCache = False):
+        try:
+            self.conn.disconnect()
+        except:
+            pass
+        self.create_conn_obj()
+        logging.getLogger("impacket").disabled = True
+
+        nthash = ''
+        hashes = None
+        if ntlm_hash != '':
+            if ntlm_hash.find(':') != -1:
+                hashes = ntlm_hash
+                nthash = ntlm_hash.split(':')[1]
+            else:
+                # only nt hash
+                hashes = ':%s' % ntlm_hash
+                nthash = ntlm_hash
+
+        if not all('' == s for s in [self.nthash, password, aesKey]):
+            kerb_pass = next(s for s in [self.nthash, password, aesKey] if s)
+        else:
+            kerb_pass = ''
+        try:
+            res = self.conn.kerberosLogin(None, username, password, domain, hashes, aesKey, kdcHost=kdcHost, useCache=useCache)
+            if res is not True:
+                self.conn.printReplies()
+                return False
+
+            self.password = password
+            self.username = username
+            self.domain = domain
+            self.check_if_admin()
+
+            out = u'{}{}{} {}'.format('{}\\'.format(domain) if not self.args.local_auth else '',
+                                    username,
+                                    # Show what was used between cleartext, nthash, aesKey and ccache
+                                    " from ccache" if useCache
+                                    else ":%s" % (kerb_pass if not self.config.get('CME', 'audit_mode') else self.config.get('CME', 'audit_mode')*8),
+                                    highlight('({})'.format(self.config.get('CME', 'pwn3d_label')) if self.admin_privs else ''))
+            self.logger.success(out)
+            if not self.args.local_auth:
+                add_user_bh(self.username, self.domain, self.logger, self.config)
+            if not self.args.continue_on_success:
+                return True
+        except Exception as e:
+            self.logger.error(u'{}\\{}{} {}'.format('{}\\'.format(domain) if not self.args.local_auth else '',
+                                                    username,
+                                                    # Show what was used between cleartext, nthash, aesKey and ccache
+                                                    " from ccache" if useCache
+                                                    else ":%s" % (kerb_pass if not self.config.get('CME', 'audit_mode') else self.config.get('CME', 'audit_mode')*8),
+                                                    e))
+            return False
 
     def plaintext_login(self, domain, username, password):
         try:
@@ -167,7 +229,7 @@ class mssql(connection):
             self.password = password
             self.username = username
             self.domain = domain
-            self.check_if_admin(self.args.local_auth)
+            self.check_if_admin()
             self.db.add_credential('plaintext', domain, username, password)
 
             if self.admin_privs:
@@ -175,16 +237,17 @@ class mssql(connection):
 
             out = u'{}{}:{} {}'.format('{}\\'.format(domain) if not self.args.local_auth else '',
                                     username,
-                                    password,
+                                    password if not self.config.get('CME', 'audit_mode') else self.config.get('CME', 'audit_mode')*8,
                                     highlight('({})'.format(self.config.get('CME', 'pwn3d_label')) if self.admin_privs else ''))
             self.logger.success(out)
-            add_user_bh(self.username, self.domain, self.logger, self.config)
+            if not self.args.local_auth:
+                add_user_bh(self.username, self.domain, self.logger, self.config)
             if not self.args.continue_on_success:
                 return True
         except Exception as e:
             self.logger.error(u'{}\\{}:{} {}'.format(domain,
                                                         username,
-                                                        password,
+                                                        password if not self.config.get('CME', 'audit_mode') else self.config.get('CME', 'audit_mode')*8,
                                                         e))
             return False
 
@@ -205,7 +268,7 @@ class mssql(connection):
         self.create_conn_obj()
 
         try:
-            res = self.conn.login(None, username, '', domain, ':' + nthash if not lmhash else ntlm_hash, True)
+            res = self.conn.login(None, username, '', domain, ':' + nthash if not lmhash else ntlm_hash, not self.args.local_auth)
             if res is not True:
                 self.conn.printReplies()
                 return False
@@ -221,16 +284,17 @@ class mssql(connection):
 
             out = u'{}\\{} {} {}'.format(domain,
                                         username,
-                                        ntlm_hash,
+                                        ntlm_hash if not self.config.get('CME', 'audit_mode') else self.config.get('CME', 'audit_mode')*8,
                                         highlight('({})'.format(self.config.get('CME', 'pwn3d_label')) if self.admin_privs else ''))
             self.logger.success(out)
-            add_user_bh(self.username, self.domain, self.logger, self.config)
+            if not self.args.local_auth:
+                add_user_bh(self.username, self.domain, self.logger, self.config)
             if not self.args.continue_on_success:
                 return True
         except Exception as e:
             self.logger.error(u'{}\\{}:{} {}'.format(domain,
                                                         username,
-                                                        ntlm_hash,
+                                                        ntlm_hash if not self.config.get('CME', 'audit_mode') else self.config.get('CME', 'audit_mode')*8,
                                                         e))
             return False
 
@@ -276,6 +340,32 @@ class mssql(connection):
         # We're disabling PS obfuscation by default as it breaks the MSSQLEXEC execution method (probably an escaping issue)
         ps_command = create_ps_command(payload, force_ps32=force_ps32, dont_obfs=dont_obfs)
         return self.execute(ps_command, get_output)
+
+    @requires_admin
+    def put_file(self):
+        self.logger.info('Copy {} to {}'.format(self.args.put_file[0], self.args.put_file[1]))
+        with open(self.args.put_file[0], 'rb') as f:
+            try:
+                data = f.read()
+                self.logger.info('Size is {} bytes'.format(len(data)))
+                exec_method = MSSQLEXEC(self.conn)
+                exec_method.put_file(data, self.args.put_file[1])
+                if exec_method.file_exists(self.args.put_file[1]):
+                    self.logger.success('File has been uploaded on the remote machine')
+                else:
+                    self.logger.error('File does not exist on the remote system.. erorr during upload')
+            except Exception as e:
+                self.logger.error('Error during upload : {}'.format(e))
+
+    @requires_admin
+    def get_file(self):
+        self.logger.info('Copy {} to {}'.format(self.args.get_file[0], self.args.get_file[1]))
+        try:
+            exec_method = MSSQLEXEC(self.conn)
+            exec_method.get_file(self.args.get_file[0], self.args.get_file[1])
+            self.logger.success('File {} was transferred to {}'.format(self.args.get_file[0], self.args.get_file[1]))
+        except Exception as e:
+            self.logger.error('Error reading file {}: {}'.format(self.args.get_file[0], e))
 
 # We hook these functions in the tds library to use CME's logger instead of printing the output to stdout
 # The whole tds library in impacket needs a good overhaul to preserve my sanity
